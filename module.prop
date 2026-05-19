@@ -1,0 +1,7 @@
+id=traffic-stats
+name=Traffic Stats (vnstat-lite)
+version=v1.0.0
+versionCode=1
+author=kaandikec
+description=Pure-shell per-interface traffic accounting daemon. Polls /proc/net/dev every 60 s, accumulates to /data/traffic-stats/<iface>/<YYYY-MM-DD>. Survives counter resets across reboots. statusbot reads it via /traffic_history.
+updateJson=https://raw.githubusercontent.com/dikeckaan/magisk-zte-f50-traffic-stats/main/update.json
