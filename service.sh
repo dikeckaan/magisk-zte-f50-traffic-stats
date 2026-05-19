@@ -9,37 +9,28 @@
 #   /data/traffic-stats/daemon.log         restart log
 
 DB=/data/traffic-stats
-SNAP="$DB/.snapshot"
 LOG="$DB/daemon.log"
-INTERVAL=60
 
 mkdir -p "$DB"
 
-# Locate bash (provided by bin-utils — needed for ${!var} indirect expansion).
-BASH=""
-for p in /system/bin/bash \
-         /data/adb/modules/bin-utils/system/bin/bash \
-         /data/adb/modules_update/bin-utils/system/bin/bash; do
-    [ -x "$p" ] && BASH="$p" && break
-done
-if [ -z "$BASH" ]; then
-    echo "[$(date)] FATAL: bash not found, install bin-utils v1.2.0+" >> "$LOG"
-    exit 1
-fi
+# bin-utils v1.3.0+ provides bash + common.sh (hard requirement).
+. /data/adb/modules/bin-utils/lib/common.sh
 
-# Warm-up: let cellular/wifi come up
+BASH=$(find_bash) || {
+    log_line "FATAL: bash not found via find_bash, install bin-utils v1.3.0+"
+    exit 1
+}
+
+# Warm-up: let cellular/wifi come up before the first poll.
 sleep 30
 
-# Run poller under bash in a supervised loop
+# Supervisor loop. log_rotate runs each iteration to cap log growth.
 (
     while true; do
-        echo "[$(date)] starting traffic-stats poller (interp: $BASH)" >> "$LOG"
+        log_rotate 524288
+        log_line "starting traffic-stats poller (interp: $BASH)"
         "$BASH" /data/adb/modules/traffic-stats/poller.sh >> "$LOG" 2>&1
-        rc=$?
-        echo "[$(date)] poller exited rc=$rc, restarting in 10 s" >> "$LOG"
-        # Rotate log if huge
-        sz=$(stat -c %s "$LOG" 2>/dev/null || echo 0)
-        [ "$sz" -gt 524288 ] && mv "$LOG" "$LOG.1"
+        log_line "poller exited rc=$?, restarting in 10 s"
         sleep 10
     done
 ) &
